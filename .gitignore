@@ -93,6 +93,7 @@ ENV/
 
 # PyCharm
 .idea/
+*.iml
 
 # For mac
 .DS_Store
