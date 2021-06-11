@@ -88,65 +88,54 @@ def create_feature_extract(model):
     outputs_dict = dict([(layer.name, layer.output) for layer in model.layers])
 
     # Set up a model that returns the activation values for every layer in
-    # VGG19 (as a dict).
+    # model (as a dict).
     feature_extractor = models.Model(inputs=model.inputs, outputs=outputs_dict)
     feature_extractor.summary()
 
     return feature_extractor
 
 
-def vis_img_filters(model):
+def vis_model_input_filters(model):
     # 1st conv filter weight
-    img_filter_weight = [weight
-                         for weight in model.weights
-                         if 'kernel' in weight.name][0].numpy()
-    # img_filter_num.shape = (in_channel, kernel_size, kernel_size, out_channel)
-    img_filter_num = img_filter_weight.shape[-1]
-    grid_size = int(np.ceil(np.sqrt(img_filter_num)))
-
-    w_min, w_max = np.min(img_filter_weight), np.max(img_filter_weight)
-
-    for i in range(img_filter_num):
-        plt.subplot(grid_size, grid_size, i + 1)
-        # Rescale the weights to be between 0 and 255
-        wimg = 255.0 * (img_filter_weight[:, :, :, i].squeeze() - w_min) / (w_max - w_min)
-        plt.imshow(wimg.astype('uint8'))
-        plt.axis('off')
-
-    plt.savefig('img_filter_weight.png')
-    plt.clf()
+    input_filter_weight = [weight
+                           for weight in model.weights
+                           if 'kernel' in weight.name][0].numpy()
+    vis_tensor_grid(input_filter_weight, 'input_filter_weight.png')
 
 
-def vis_feature_maps(model,
-                     img_path='Green_Sea_Turtle_grazing_seagrass.jpg'):
-    """vis vgg feature maps"""
-    # exclude input layer
-    # Get the symbolic outputs of each "key" layer (we gave them unique names).
-    outputs_dict = dict([(layer.name, layer.output)
-                         for layer in model.layers
-                         if not isinstance(layer, layers.InputLayer)])
-
-    # Set up a model that returns the activation values for every layer in
-    # VGG19 (as a dict).
-    feature_extractor = models.Model(inputs=model.inputs, outputs=outputs_dict)
+def vis_model_feature_maps(feature_extractor,
+                           img_path='Green_Sea_Turtle_grazing_seagrass.jpg'):
+    """vis model feature maps"""
+    # # exclude input layer
+    # # Get the symbolic outputs of each "key" layer (we gave them unique names).
+    # outputs_dict = dict([(layer.name, layer.output)
+    #                      for layer in model.layers
+    #                      if not isinstance(layer, layers.InputLayer)])
+    #
+    # # Set up a model that returns the activation values for every layer in
+    # # model (as a dict).
+    # feature_extractor = models.Model(inputs=model.inputs, outputs=outputs_dict)
 
     image = load_and_preprocess_image(img_path)
     feature_maps = feature_extractor.predict(image)
 
     for layer_name, feature_map in feature_maps.items():
         logging.info("visual feature map grid, layer_name = %s" % layer_name)
-        vis_feature_map_grid(feature_map, '%s_feature_map.png' % layer_name)
+        vis_tensor_grid(feature_map, '%s_feature_map.png' % layer_name)
 
 
-def vis_feature_map_grid(feature_map, save_path):
-    # feature_map.shape = (1, height, width, channel)
-    channel_size = feature_map.shape[-1]
-    grid_size = int(np.ceil(np.sqrt(channel_size)))
-    w_min, w_max = np.min(feature_map), np.max(feature_map)
-    for i in range(channel_size):
+def vis_tensor_grid(tensor, save_path):
+    assert len(tensor.shape) == 4, ("tensor.shape = (batch_size, height, width, channel_size) or "
+                                    "tensor.shape = (in_channel, filter_size, filter_size, out_channel) "
+                                    "batch_size = 1 for feature map vis"
+                                    "in_channel = 3 for input filter weight vis")
+    num_channel = tensor.shape[-1]
+    grid_size = int(np.ceil(np.sqrt(num_channel)))
+    w_min, w_max = np.min(tensor), np.max(tensor)
+    for i in range(num_channel):
         plt.subplot(grid_size, grid_size, i + 1)
         # Rescale the weights to be between 0 and 255
-        wimg = 255.0 * (feature_map[:, :, :, i].squeeze() - w_min) / (w_max - w_min)
+        wimg = 255.0 * (tensor[:, :, :, i].squeeze() - w_min) / (w_max - w_min)
         plt.imshow(wimg.astype('uint8'))
         plt.axis('off')
     plt.savefig(save_path)
@@ -342,7 +331,22 @@ def neural_style_transfer(feature_extractor,
 
 def content_reconstructions(feature_extractor):
 
-    # block2_conv2_content_reconstructions
+    # block1_conv2
+    params = {
+        'content_image_path': 'Green_Sea_Turtle_grazing_seagrass.jpg',
+        'style_image_path': 'The_Great_Wave_off_Kanagawa.jpg',
+        'content_layer_name': 'block1_conv2',
+        'content_weight': 1,
+        'style_layer_names': None,
+        'style_weight': None,
+        'total_variation_weight': 0,
+        'result_prefix': 'content_reconstructions_block1_conv2',
+        'init_random': True
+    }
+
+    neural_style_transfer(feature_extractor, **params)
+
+    # block2_conv2
     params = {
         'content_image_path': 'Green_Sea_Turtle_grazing_seagrass.jpg',
         'style_image_path': 'The_Great_Wave_off_Kanagawa.jpg',
@@ -357,7 +361,22 @@ def content_reconstructions(feature_extractor):
 
     neural_style_transfer(feature_extractor, **params)
 
-    # block4_conv2_content_reconstructions
+    # block3_conv2
+    params = {
+        'content_image_path': 'Green_Sea_Turtle_grazing_seagrass.jpg',
+        'style_image_path': 'The_Great_Wave_off_Kanagawa.jpg',
+        'content_layer_name': 'block3_conv2',
+        'content_weight': 1,
+        'style_layer_names': None,
+        'style_weight': None,
+        'total_variation_weight': 0,
+        'result_prefix': 'content_reconstructions_block3_conv2',
+        'init_random': True
+    }
+
+    neural_style_transfer(feature_extractor, **params)
+
+    # block4_conv2
     params = {
         'content_image_path': 'Green_Sea_Turtle_grazing_seagrass.jpg',
         'style_image_path': 'The_Great_Wave_off_Kanagawa.jpg',
@@ -372,10 +391,25 @@ def content_reconstructions(feature_extractor):
 
     neural_style_transfer(feature_extractor, **params)
 
+    # block5_conv2
+    params = {
+        'content_image_path': 'Green_Sea_Turtle_grazing_seagrass.jpg',
+        'style_image_path': 'The_Great_Wave_off_Kanagawa.jpg',
+        'content_layer_name': 'block5_conv2',
+        'content_weight': 1,
+        'style_layer_names': None,
+        'style_weight': None,
+        'total_variation_weight': 0,
+        'result_prefix': 'content_reconstructions_block5_conv2',
+        'init_random': True
+    }
+
+    neural_style_transfer(feature_extractor, **params)
+
 
 def style_reconstructions(feature_extractor):
 
-    # block1_conv1_style_reconstructions
+    # block1_conv1
     params = {
         'content_image_path': 'Green_Sea_Turtle_grazing_seagrass.jpg',
         'style_image_path': 'The_Great_Wave_off_Kanagawa.jpg',
@@ -392,7 +426,25 @@ def style_reconstructions(feature_extractor):
 
     neural_style_transfer(feature_extractor, **params)
 
-    # block3_conv1_style_reconstructions
+    # block2_conv1
+    params = {
+        'content_image_path': 'Green_Sea_Turtle_grazing_seagrass.jpg',
+        'style_image_path': 'The_Great_Wave_off_Kanagawa.jpg',
+        'content_layer_name': None,
+        'content_weight': None,
+        'style_layer_names': [
+            "block1_conv1",
+            "block2_conv1",
+        ],
+        'style_weight': 1,
+        'total_variation_weight': 0,
+        'result_prefix': 'style_reconstructions_block2_conv1',
+        'init_random': True
+    }
+
+    neural_style_transfer(feature_extractor, **params)
+
+    # block3_conv1
     params = {
         'content_image_path': 'Green_Sea_Turtle_grazing_seagrass.jpg',
         'style_image_path': 'The_Great_Wave_off_Kanagawa.jpg',
@@ -411,7 +463,27 @@ def style_reconstructions(feature_extractor):
 
     neural_style_transfer(feature_extractor, **params)
 
-    # block5_conv1_style_reconstructions
+    # block4_conv1
+    params = {
+        'content_image_path': 'Green_Sea_Turtle_grazing_seagrass.jpg',
+        'style_image_path': 'The_Great_Wave_off_Kanagawa.jpg',
+        'content_layer_name': None,
+        'content_weight': None,
+        'style_layer_names': [
+            "block1_conv1",
+            "block2_conv1",
+            "block3_conv1",
+            "block4_conv1",
+        ],
+        'style_weight': 1,
+        'total_variation_weight': 0,
+        'result_prefix': 'style_reconstructions_block4_conv1',
+        'init_random': True
+    }
+
+    neural_style_transfer(feature_extractor, **params)
+
+    # block5_conv1
     params = {
         'content_image_path': 'Green_Sea_Turtle_grazing_seagrass.jpg',
         'style_image_path': 'The_Great_Wave_off_Kanagawa.jpg',
@@ -458,14 +530,33 @@ def nst(feature_extractor):
 
 
 def run():
+
+    # vis/content/style/nst
+    mode = 'vis/content/style/nst'
+
     vgg_model = load_model()
-    vis_img_filters(vgg_model)
-    vis_feature_maps(vgg_model)
+
+    if 'vis' in mode:
+        logging.info("visual model input filters")
+        vis_model_input_filters(vgg_model)
 
     feature_extractor = create_feature_extract(vgg_model)
-    content_reconstructions(feature_extractor)
-    style_reconstructions(feature_extractor)
-    nst(feature_extractor)
+
+    if 'vis' in mode:
+        logging.info("visual model feature maps")
+        vis_model_feature_maps(feature_extractor)
+
+    if 'content' in mode:
+        logging.info("content reconstruction")
+        content_reconstructions(feature_extractor)
+
+    if 'style' in mode:
+        logging.info("style reconstruction")
+        style_reconstructions(feature_extractor)
+
+    if 'nst' in mode:
+        logging.info("neural style transfer")
+        nst(feature_extractor)
 
 
 def main(_):
