@@ -14,13 +14,6 @@ RUN apt-get update && apt-get install -y \
     python3-tk \
     wget
 
-# Install gcloud and gsutil commands
-# https://cloud.google.com/sdk/docs/quickstart-debian-ubuntu
-#RUN export CLOUD_SDK_REPO="cloud-sdk-$(lsb_release -c -s)" && \
-#    echo "deb http://packages.cloud.google.com/apt $CLOUD_SDK_REPO main" | tee -a /etc/apt/sources.list.d/google-cloud-sdk.list && \
-#    curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add - && \
-#    apt-get update -y && apt-get install google-cloud-sdk -y
-
 # Add new user to avoid running as root
 RUN useradd -ms /bin/bash tensorflow
 USER tensorflow
@@ -41,12 +34,4 @@ RUN python -m pip install .
 
 ENV TF_CPP_MIN_LOG_LEVEL 3
 
-# Add Tini. Tini operates as a process subreaper for jupyter. This prevents
-# kernel crashes.
-ENV TINI_VERSION v0.6.0
-ADD --chown=tensorflow https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /usr/bin/tini
-RUN chmod +x /usr/bin/tini
-ENTRYPOINT ["/usr/bin/tini", "--"]
-
 EXPOSE 8888
-CMD ["jupyter", "notebook", "--port=8888", "--no-browser", "--ip=0.0.0.0"]
