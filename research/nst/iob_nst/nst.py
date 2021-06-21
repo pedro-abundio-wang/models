@@ -20,7 +20,6 @@ import tensorflow as tf
 
 from tensorflow.keras import models
 from tensorflow.keras import optimizers
-from tensorflow.keras import layers
 from tensorflow.keras import applications
 from tensorflow.keras import preprocessing
 
@@ -106,16 +105,6 @@ def vis_model_input_filters(model):
 def vis_model_feature_maps(feature_extractor,
                            img_path='Green_Sea_Turtle_grazing_seagrass.jpg'):
     """vis model feature maps"""
-    # # exclude input layer
-    # # Get the symbolic outputs of each "key" layer (we gave them unique names).
-    # outputs_dict = dict([(layer.name, layer.output)
-    #                      for layer in model.layers
-    #                      if not isinstance(layer, layers.InputLayer)])
-    #
-    # # Set up a model that returns the activation values for every layer in
-    # # model (as a dict).
-    # feature_extractor = models.Model(inputs=model.inputs, outputs=outputs_dict)
-
     image = load_and_preprocess_image(img_path)
     feature_maps = feature_extractor.predict(image)
 
@@ -154,7 +143,7 @@ def gram_matrix(features, normalize=True):
     - features: Tensor of shape (1, height, width, channel) giving features for
       a single image.
     - normalize: optional, whether to normalize the Gram matrix
-        If True, divide the Gram matrix by the number of neurons (height * width * channel)
+        If True, divide the Gram matrix by the number of neurons (height * width)
 
     Returns:
     - gram: Tensor of shape (channel, channel) giving the (optionally normalized)
@@ -165,7 +154,6 @@ def gram_matrix(features, normalize=True):
     feature_maps = tf.reshape(features, (-1, channel))
     gram = tf.matmul(tf.transpose(feature_maps), feature_maps)
     if normalize:
-        # gram = tf.divide(gram, tf.cast(2.0 * height * width * channel, gram.dtype))
         gram = tf.divide(gram, tf.cast(height * width, gram.dtype))
 
     return gram
@@ -189,7 +177,6 @@ def total_variation_loss(image):
     - loss: Tensor holding a scalar giving the total variation loss
       for img weighted by tv_weight.
     """
-    # Your implementation should be vectorized and not require any loops!
     image = tf.squeeze(image)
     height, width, channel = image.shape
     img_col_start = tf.slice(image, [0, 0, 0], [height, width - 1, channel])
@@ -229,9 +216,9 @@ def compute_loss(feature_extractor,
     # style loss
     if style_layer_names is not None:
         weight_per_style_layer = 1.0 / float(len(style_layer_names))
-        for i, layer_name in enumerate(style_layer_names):
-            style_layer_features = style_features[layer_name]
-            combination_layer_features = combination_features[layer_name]
+        for i, style_layer_name in enumerate(style_layer_names):
+            style_layer_features = style_features[style_layer_name]
+            combination_layer_features = combination_features[style_layer_name]
             s_loss += weight_per_style_layer * style_loss(style_layer_features, combination_layer_features)
         s_loss *= style_weight
 
@@ -523,7 +510,6 @@ def nst(feature_extractor):
         'total_variation_weight': 0,
         'result_prefix': 'nst',
         'init_random': False
-
     }
 
     neural_style_transfer(feature_extractor, **params)
