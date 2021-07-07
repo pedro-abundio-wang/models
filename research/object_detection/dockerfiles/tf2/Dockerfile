@@ -12,10 +12,11 @@ RUN apt-get update && apt-get install -y \
     python3-pil \
     python3-lxml \
     python3-tk \
+    libgl1-mesa-glx \
     wget
 
 # Add new user to avoid running as root
-RUN useradd -ms /bin/bash tensorflow
+RUN useradd -ms /bin/bash --uid ${UID} tensorflow
 USER tensorflow
 WORKDIR /home/tensorflow
 

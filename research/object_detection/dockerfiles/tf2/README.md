@@ -7,5 +7,5 @@ These instructions are experimental.
 ```bash
 # From the root of the git repository
 sudo docker build -f research/object_detection/dockerfiles/tf2/Dockerfile -t od .
-sudo docker run --rm --gpus all --publish-all -it od
+sudo docker run --rm --gpus all --publish-all -it -v /home/pedro:/home/pedro --privileged od
 ```
