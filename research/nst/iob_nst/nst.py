@@ -299,6 +299,7 @@ def neural_style_transfer(feature_extractor,
             style_weight,
             total_variation_weight)
         optimizer.apply_gradients([(grads, combination_image)])
+        # clipping the image y to the range [0, 255] at each iteration
         clipped = tf.clip_by_value(combination_image, min_vals, max_vals)
         combination_image.assign(clipped)
 
